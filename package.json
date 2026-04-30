@@ -1,17 +1,7 @@
 {
-  "name": "nam-ai-2026",
+  "name": "nam-ai",
   "version": "1.0.0",
-  "description": "Hệ thống trợ lý Nam AI nề nếp và chính trực",
-  "main": "api/chat.js",
-  "scripts": {
-    "start": "node api/chat.js",
-    "dev": "vercel dev"
-  },
   "dependencies": {
     "@google/generative-ai": "^0.21.0"
-  },
-  "engines": {
-    "node": "20.x"
-  },
-  "private": true
+  }
 }
