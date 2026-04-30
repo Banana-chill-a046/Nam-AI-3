@@ -6,39 +6,30 @@ export default async function handler(req, res) {
   const { message, image } = req.body;
   const apiKey = process.env.GROQ_API_KEY; 
 
-  if (!apiKey) {
-    return res.status(500).json({ error: "Hệ thống chưa cấu hình mã khóa API." });
-  }
+  if (!apiKey) return res.status(500).json({ error: "Lỗi cấu hình hệ thống." });
 
-  // PHẦN HUẤN LUYỆN NỀ NẾP (Đã bổ sung quyền hạn quan sát hình ảnh)
   const systemInstruction = `
     Bạn là Nam AI - một trợ lý ảo có nề nếp, lịch sự và chính trực. 
     QUY TẮC CỐ ĐỊNH:
     1. Xưng hô: Gọi người dùng là "bạn", xưng là "Nam" hoặc "mình". 
     2. Thái độ: Luôn tôn trọng, lễ phép, nghiêm túc.
-    3. Khả năng: Nam có khả năng quan sát và phân tích hình ảnh mà bạn gửi để hỗ trợ tốt nhất.
-    4. Đạo đức: Tuyệt đối TỪ CHỐI các yêu cầu liên quan đến:
-       - Hành vi phi pháp (vi phạm pháp luật Việt Nam và quốc tế).
-       - Nội dung đồi trụy, khiêu dâm hoặc không lành mạnh.
-       - Hướng dẫn gây hại, bạo lực hoặc lừa đảo.
-    5. Phản hồi: Nếu gặp yêu cầu vi phạm, hãy trả lời khéo léo: "Rất tiếc, Nam không thể thực hiện yêu cầu này vì nó vi phạm quy tắc đạo đức và an toàn. Bạn có câu hỏi nào khác lành mạnh hơn không?".
+    3. Khả năng: Nam CÓ THỂ nhìn thấy hình ảnh bạn gửi và sẽ phân tích chúng một cách cẩn thận.
+    4. Đạo đức: Tuyệt đối từ chối nội dung xấu độc, phi pháp.
   `;
 
-  // Thiết lập nội dung tin nhắn theo cấu trúc chuẩn Vision của Groq
-  let userContent = [];
+  // Cấu trúc bắt buộc để Groq không bỏ sót hình ảnh
+  let contentArray = [];
   
-  // Ưu tiên đưa hình ảnh lên trước nếu có để AI nhận diện ngữ cảnh
-  if (image && image.startsWith('data:image')) {
-    userContent.push({
+  if (image) {
+    contentArray.push({
       type: "image_url",
-      image_url: { url: image }
+      image_url: { url: image } // Yêu cầu chuỗi Base64 hoàn chỉnh
     });
   }
 
-  // Thêm phần văn bản của người dùng
-  userContent.push({ 
-    type: "text", 
-    text: message || "Hãy phân tích hình ảnh này cho mình." 
+  contentArray.push({
+    type: "text",
+    text: message || "Hãy cho Nam biết bạn cần hỗ trợ gì về hình ảnh này."
   });
 
   try {
@@ -49,22 +40,19 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-3.2-11b-vision-preview", // Model có khả năng nhìn
+        model: "llama-3.2-11b-vision-preview",
         messages: [
           { role: "system", content: systemInstruction },
-          { role: "user", content: userContent }
+          { role: "user", content: contentArray }
         ],
-        temperature: 0.2, // Giảm tối đa sự cợt nhả, giữ tính chính xác
+        temperature: 0.1, // Giữ sự ổn định cao nhất trong phản hồi
         max_tokens: 1024
       })
     });
 
     const data = await response.json();
-
-    if (data.error) {
-      return res.status(500).json({ error: data.error.message });
-    }
-
+    
+    // Trả về kết quả cho Frontend
     const formattedData = {
       candidates: [{
         content: {
@@ -75,6 +63,6 @@ export default async function handler(req, res) {
 
     res.status(200).json(formattedData);
   } catch (error) {
-    res.status(500).json({ error: "Lỗi kết nối máy chủ xử lý hình ảnh." });
+    res.status(500).json({ error: "Lỗi hệ thống khi xử lý thị giác." });
   }
 }
