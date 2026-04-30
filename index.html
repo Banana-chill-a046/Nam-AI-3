@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nam AI - Pro</title>
     <style>
-        /* PHÔNG CHỮ CHUẨN GEMINI */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
         :root { 
@@ -18,17 +17,16 @@
 
         body { 
             margin: 0; 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            font-family: 'Inter', sans-serif; 
             background: var(--bg-dark); 
             color: var(--text-main); 
             height: 100vh; 
             display: flex; 
             flex-direction: column; 
             overflow: hidden; 
-            letter-spacing: -0.02em; /* Độ hẹp chữ chuẩn Gemini */
+            letter-spacing: -0.02em;
         }
         
-        /* HIỆU ỨNG NEON 7 MÀU CHO LỜI CHÀO */
         @keyframes neon-party {
             0% { color: #ff0000; text-shadow: 0 0 15px #ff0000; }
             20% { color: #00ff00; text-shadow: 0 0 15px #00ff00; }
@@ -47,11 +45,10 @@
             line-height: 1.2;
         }
 
-        /* KHU VỰC CHAT */
         #chat { flex: 1; overflow-y: auto; padding: 20px 10%; scroll-behavior: smooth; }
         
-        .msg-wrapper { display: flex; flex-direction: column; margin-bottom: 30px; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .msg-wrapper { display: flex; flex-direction: column; margin-bottom: 30px; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
         .msg-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #fff; }
         .user-wrapper { align-items: flex-end; }
@@ -62,13 +59,12 @@
             border-radius: 18px; 
             font-size: 16px; 
             line-height: 1.6; 
-            max-width: 80%; 
+            max-width: 85%; 
             word-wrap: break-word;
         }
         .user-wrapper .message { background: var(--user-bubble); border-bottom-right-radius: 4px; }
         .ai-wrapper .message { background: transparent; padding-left: 0; color: #e3e3e3; }
 
-        /* FILE CHIP CHUẨN */
         .file-chip { 
             display: none; 
             background: #2b2d2f; 
@@ -77,12 +73,9 @@
             padding: 12px 16px; 
             margin-bottom: 12px; 
             width: fit-content; 
-            min-width: 200px; 
         }
-        .fc-name { font-size: 14px; font-weight: 600; display: block; color: #fff; }
-        .fc-type { font-size: 11px; color: #9aa0a6; margin-top: 2px; }
+        .fc-name { font-size: 14px; font-weight: 600; color: #fff; }
 
-        /* THANH NHẬP LIỆU */
         .input-area { padding: 10px 10% 30px; }
         .input-box-outer { 
             background: var(--bg-input); 
@@ -101,10 +94,8 @@
             font-size: 16px; 
             font-family: inherit; 
             resize: none; 
-            padding: 5px 0;
         }
-        .btn-icon { background: transparent; border: none; color: #9aa0a6; cursor: pointer; font-size: 22px; display: flex; align-items: center; }
-        
+        .btn-icon { background: transparent; border: none; color: #9aa0a6; cursor: pointer; font-size: 22px; }
         #header-name { padding: 20px; font-weight: 600; color: var(--accent); position: absolute; }
     </style>
 </head>
@@ -114,91 +105,91 @@
 
     <div id="main-wrapper" style="flex:1; display:flex; flex-direction:column; max-width:900px; margin:0 auto; width:100%;">
         
-        <!-- MÀN HÌNH CHÀO ĐẦY ĐỦ -->
         <div id="start-screen" style="flex:1; display:flex; justify-content:center; align-items:center;">
             <div class="neon-title">Chào bạn,<br>bạn cần giúp gì?</div>
         </div>
 
-        <!-- NỘI DUNG CHAT -->
         <div id="chat-container" style="display:none; flex:1; flex-direction:column; overflow:hidden;">
             <div id="chat"></div>
         </div>
 
-        <!-- INPUT -->
         <div class="input-area">
             <div id="file-chip" class="file-chip">
-                <span id="fc-name" class="fc-name">Tên tệp...</span>
-                <span id="fc-type" class="fc-type">Định dạng văn phòng</span>
+                <span id="fc-name" class="fc-name"></span>
             </div>
             <div class="input-box-outer">
                 <button class="btn-icon" onclick="document.getElementById('file-input').click()">+</button>
-                <textarea id="user-input" placeholder="Hỏi bất kỳ điều gì..." rows="1"></textarea>
-                <button class="btn-icon" onclick="send()" style="color:var(--accent)">➤</button>
+                <textarea id="user-input" placeholder="Nhập yêu cầu..." rows="1"></textarea>
+                <button id="send-btn" class="btn-icon" onclick="send()" style="color:var(--accent)">➤</button>
             </div>
         </div>
 
-        <input type="file" id="file-input" style="display:none;" accept="image/*,video/*,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt">
+        <input type="file" id="file-input" style="display:none;" accept="image/*">
     </div>
 
     <script>
         let isChatting = false;
         const fileInput = document.getElementById('file-input');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
 
-        // Xử lý tệp
         fileInput.addEventListener('change', () => {
             if (fileInput.files[0]) {
-                const file = fileInput.files[0];
-                document.getElementById('fc-name').innerText = file.name;
-                let type = "Tài liệu văn phòng";
-                if(file.type.includes('image')) type = "Hình ảnh";
-                if(file.type.includes('video')) type = "Video";
-                document.getElementById('fc-type').innerText = type;
+                document.getElementById('fc-name').innerText = fileInput.files[0].name;
                 document.getElementById('file-chip').style.display = 'block';
             }
         });
 
         async function send() {
-            const input = document.getElementById('user-input');
-            const text = input.value.trim();
-            const hasFile = fileInput.files[0];
+            const text = userInput.value.trim();
+            const file = fileInput.files[0];
+            if (!text && !file) return;
 
-            if (!text && !hasFile) return;
-
+            sendBtn.disabled = true;
             if (!isChatting) {
                 isChatting = true;
                 document.getElementById('start-screen').style.display = 'none';
                 document.getElementById('chat-container').style.display = 'flex';
             }
 
-            // Hiện tin nhắn của Bạn
-            addMessage(text, 'user', hasFile?.name);
-            input.value = "";
-            input.style.height = 'auto';
+            addMessage(text, 'user', file?.name);
+            
+            let base64 = null;
+            if (file) {
+                base64 = await new Promise(r => {
+                    const reader = new FileReader();
+                    reader.onload = () => r(reader.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            userInput.value = "";
+            userInput.style.height = 'auto';
             document.getElementById('file-chip').style.display = 'none';
+            fileInput.value = "";
 
             const loaderId = showLoading();
 
             try {
-                // Gọi API tới Vercel backend
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
+                    body: JSON.stringify({ message: text, imageBase64: base64 })
                 });
+                
                 const data = await response.json();
                 document.getElementById(loaderId).remove();
                 
-                // Kiểm tra cấu trúc phản hồi từ API
-                if (data.candidates && data.candidates[0].content.parts[0].text) {
-                    addMessage(data.candidates[0].content.parts[0].text, 'ai');
+                if (data.reply) {
+                    addMessage(data.reply, 'ai');
                 } else {
-                    addMessage("Nam không nhận được phản hồi, bạn thử lại nhé!", 'ai');
+                    addMessage("Lỗi hệ thống: " + (data.error || "Không xác định"), 'ai');
                 }
-
             } catch (e) {
-                document.getElementById(loaderId).innerText = "Lỗi kết nối Server!";
+                document.getElementById(loaderId).innerText = "Lỗi kết nối Server.";
+            } finally {
+                sendBtn.disabled = false;
             }
-            fileInput.value = "";
         }
 
         function addMessage(text, type, fileName) {
@@ -209,7 +200,7 @@
             wrapper.innerHTML = `
                 <div class="msg-name">${type === 'user' ? 'Bạn' : 'Nam AI'}</div>
                 <div class="message">
-                    ${fileName ? `<div style="background:#1a1a1b; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid #333; font-size:13px">📁 ${fileName}</div>` : ''}
+                    ${fileName ? `<div style="background:#1a1a1b; padding:8px; border-radius:8px; margin-bottom:8px; border:1px solid #333; font-size:12px">📁 ${fileName}</div>` : ''}
                     <span class="txt"></span>
                 </div>
             `;
@@ -222,11 +213,13 @@
                     if (i < text.length) { 
                         txtSpan.innerHTML += text.charAt(i++); 
                         chat.scrollTop = chat.scrollHeight; 
-                        setTimeout(typing, 10); 
+                        setTimeout(typing, 5); 
                     }
                 }
                 typing();
-            } else { txtSpan.innerText = text; }
+            } else { 
+                txtSpan.innerText = text; 
+            }
             chat.scrollTop = chat.scrollHeight;
         }
 
@@ -235,18 +228,18 @@
             const loader = document.createElement('div');
             loader.className = "msg-wrapper ai-wrapper";
             loader.id = id;
-            loader.innerHTML = `<div class="msg-name">Nam AI</div><div class="message" style="color:#666; font-style:italic;">Đang xử lý...</div>`;
+            loader.innerHTML = `<div class="msg-name">Nam AI</div><div class="message" style="color:#666;">Đang xử lý...</div>`;
             document.getElementById('chat').appendChild(loader);
             document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
             return id;
         }
 
-        document.getElementById('user-input').addEventListener('input', function() {
+        userInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = this.scrollHeight + 'px';
         });
 
-        document.getElementById('user-input').addEventListener('keydown', e => {
+        userInput.addEventListener('keydown', e => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
         });
     </script>
