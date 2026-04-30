@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Thiếu GEMINI_API_KEY trên Vercel!" });
   }
 
-  // ĐÂY LÀ PHẦN HUẤN LUYỆN NỀ NẾP (Đã khôi phục nguyên vẹn và giữ im)
+  // PHẦN HUẤN LUYỆN NỀ NẾP (Giữ nguyên như bạn yêu cầu)
   const systemInstruction = `
     Bạn là Nam AI - một trợ lý ảo có nề nếp, lịch sự và chính trực. 
     QUY TẮC CỐ ĐỊNH:
@@ -29,18 +29,9 @@ export default async function handler(req, res) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [
-          { 
-            role: "user", 
-            parts: [{ text: systemInstruction }] 
-          },
-          { 
-            role: "model", 
-            parts: [{ text: "Tôi đã hiểu và cam kết tuân thủ các quy tắc về nề nếp, đạo đức và an toàn của Nam AI." }] 
-          },
-          { 
-            role: "user", 
-            parts: [{ text: message }] 
-          }
+          { role: "user", parts: [{ text: systemInstruction }] },
+          { role: "model", parts: [{ text: "Tôi đã hiểu và cam kết tuân thủ các quy tắc về nề nếp, đạo đức và an toàn của Nam AI." }] },
+          { role: "user", parts: [{ text: message }] }
         ]
       })
     });
@@ -53,6 +44,6 @@ export default async function handler(req, res) {
 
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ error: "Lỗi kết nối Server!" });
+    res.status(500).json({ error: "Lỗi Server: " + error.message });
   }
 }
