@@ -1,16 +1,19 @@
 {
   "version": 2,
-  "rewrites": [
+  "name": "an-nam-pc-ai",
+  "builds": [
     {
-      "source": "/api/chat",
-      "destination": "/api/chat.js"
-    },
+      "src": "app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "app.py"
     }
   ],
   "env": {
-    "GEMINI_API_KEY": "@gemini_api_key"
+    "GEMINI_API_KEY": "@GEMINI_API_KEY"
   }
 }
