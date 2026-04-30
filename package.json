@@ -1,12 +1,7 @@
 {
-  "name": "nam-ai-vercel",
+  "name": "an-nam-pc-ai",
   "version": "1.0.0",
-  "description": "Nam AI Assistant with Neon UI and Ethical Training",
-  "main": "api/chat.js",
-  "dependencies": {
-    "express": "^4.18.2"
-  },
   "engines": {
-    "node": "18.x"
+    "node": "24.x"
   }
 }
