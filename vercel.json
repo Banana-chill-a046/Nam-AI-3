@@ -1,16 +1,7 @@
 {
-  "version": 2,
   "name": "an-nam-pc-ai",
-  "builds": [
-    {
-      "src": "app.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "app.py"
-    }
-  ]
+  "version": "1.0.0",
+  "engines": {
+    "node": "24.x"
+  }
 }
