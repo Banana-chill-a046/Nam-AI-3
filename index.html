@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nam AI - Pro</title>
+    <style>
+        /* PHÔNG CHỮ CHUẨN GEMINI */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        :root { 
+            --bg-dark: #0e0e10; 
+            --bg-input: #1e1f20; 
+            --user-bubble: #2b2d2f; 
+            --text-main: #e3e3e3; 
+            --accent: #4e92ff; 
+        }
+
+        body { 
+            margin: 0; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: var(--bg-dark); 
+            color: var(--text-main); 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            letter-spacing: -0.02em; /* Độ hẹp chữ chuẩn Gemini */
+        }
+        
+        /* HIỆU ỨNG NEON 7 MÀU CHO LỜI CHÀO */
+        @keyframes neon-party {
+            0% { color: #ff0000; text-shadow: 0 0 15px #ff0000; }
+            20% { color: #00ff00; text-shadow: 0 0 15px #00ff00; }
+            40% { color: #0000ff; text-shadow: 0 0 15px #0000ff; }
+            60% { color: #ffff00; text-shadow: 0 0 15px #ffff00; }
+            80% { color: #ff00ff; text-shadow: 0 0 15px #ff00ff; }
+            100% { color: #ff0000; text-shadow: 0 0 15px #ff0000; }
+        }
+
+        .neon-title { 
+            font-size: 42px; 
+            font-weight: 600; 
+            animation: neon-party 1.5s linear infinite; 
+            text-align: center;
+            max-width: 80%;
+            line-height: 1.2;
+        }
+
+        /* KHU VỰC CHAT */
+        #chat { flex: 1; overflow-y: auto; padding: 20px 10%; scroll-behavior: smooth; }
+        
+        .msg-wrapper { display: flex; flex-direction: column; margin-bottom: 30px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .msg-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #fff; }
+        .user-wrapper { align-items: flex-end; }
+        .ai-wrapper { align-items: flex-start; }
+
+        .message { 
+            padding: 12px 20px; 
+            border-radius: 18px; 
+            font-size: 16px; 
+            line-height: 1.6; 
+            max-width: 80%; 
+            word-wrap: break-word;
+        }
+        .user-wrapper .message { background: var(--user-bubble); border-bottom-right-radius: 4px; }
+        .ai-wrapper .message { background: transparent; padding-left: 0; color: #e3e3e3; }
+
+        /* FILE CHIP CHUẨN */
+        .file-chip { 
+            display: none; 
+            background: #2b2d2f; 
+            border: 1px solid #3c4043; 
+            border-radius: 12px; 
+            padding: 12px 16px; 
+            margin-bottom: 12px; 
+            width: fit-content; 
+            min-width: 200px; 
+        }
+        .fc-name { font-size: 14px; font-weight: 600; display: block; color: #fff; }
+        .fc-type { font-size: 11px; color: #9aa0a6; margin-top: 2px; }
+
+        /* THANH NHẬP LIỆU */
+        .input-area { padding: 10px 10% 30px; }
+        .input-box-outer { 
+            background: var(--bg-input); 
+            border-radius: 30px; 
+            padding: 10px 22px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+        }
+        textarea { 
+            flex: 1; 
+            background: transparent; 
+            border: none; 
+            outline: none; 
+            color: white; 
+            font-size: 16px; 
+            font-family: inherit; 
+            resize: none; 
+            padding: 5px 0;
+        }
+        .btn-icon { background: transparent; border: none; color: #9aa0a6; cursor: pointer; font-size: 22px; display: flex; align-items: center; }
+        
+        #header-name { padding: 20px; font-weight: 600; color: var(--accent); position: absolute; }
+    </style>
+</head>
+<body>
+
+    <div id="header-name">Nam AI</div>
+
+    <div id="main-wrapper" style="flex:1; display:flex; flex-direction:column; max-width:900px; margin:0 auto; width:100%;">
+        
+        <!-- MÀN HÌNH CHÀO ĐẦY ĐỦ -->
+        <div id="start-screen" style="flex:1; display:flex; justify-content:center; align-items:center;">
+            <div class="neon-title">Chào bạn,<br>bạn cần giúp gì?</div>
+        </div>
+
+        <!-- NỘI DUNG CHAT -->
+        <div id="chat-container" style="display:none; flex:1; flex-direction:column; overflow:hidden;">
+            <div id="chat"></div>
+        </div>
+
+        <!-- INPUT -->
+        <div class="input-area">
+            <div id="file-chip" class="file-chip">
+                <span id="fc-name" class="fc-name">Tên tệp...</span>
+                <span id="fc-type" class="fc-type">Định dạng văn phòng</span>
+            </div>
+            <div class="input-box-outer">
+                <button class="btn-icon" onclick="document.getElementById('file-input').click()">+</button>
+                <textarea id="user-input" placeholder="Hỏi bất kỳ điều gì..." rows="1"></textarea>
+                <button class="btn-icon" onclick="send()" style="color:var(--accent)">➤</button>
+            </div>
+        </div>
+
+        <input type="file" id="file-input" style="display:none;" accept="image/*,video/*,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt">
+    </div>
+
+    <script>
+        let isChatting = false;
+        const fileInput = document.getElementById('file-input');
+
+        // Xử lý tệp
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files[0]) {
+                const file = fileInput.files[0];
+                document.getElementById('fc-name').innerText = file.name;
+                let type = "Tài liệu văn phòng";
+                if(file.type.includes('image')) type = "Hình ảnh";
+                if(file.type.includes('video')) type = "Video";
+                document.getElementById('fc-type').innerText = type;
+                document.getElementById('file-chip').style.display = 'block';
+            }
+        });
+
+        async function send() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            const hasFile = fileInput.files[0];
+
+            if (!text && !hasFile) return;
+
+            if (!isChatting) {
+                isChatting = true;
+                document.getElementById('start-screen').style.display = 'none';
+                document.getElementById('chat-container').style.display = 'flex';
+            }
+
+            // Hiện tin nhắn của Bạn
+            addMessage(text, 'user', hasFile?.name);
+            input.value = "";
+            input.style.height = 'auto';
+            document.getElementById('file-chip').style.display = 'none';
+
+            const loaderId = showLoading();
+
+            try {
+                // Gọi API tới Vercel backend
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await response.json();
+                document.getElementById(loaderId).remove();
+                addMessage(data.candidates[0].content.parts[0].text, 'ai');
+            } catch (e) {
+                document.getElementById(loaderId).innerText = "Lỗi kết nối Server!";
+            }
+            fileInput.value = "";
+        }
+
+        function addMessage(text, type, fileName) {
+            const chat = document.getElementById('chat');
+            const wrapper = document.createElement('div');
+            wrapper.className = `msg-wrapper ${type === 'user' ? 'user-wrapper' : 'ai-wrapper'}`;
+            
+            wrapper.innerHTML = `
+                <div class="msg-name">${type === 'user' ? 'Bạn' : 'Nam AI'}</div>
+                <div class="message">
+                    ${fileName ? `<div style="background:#1a1a1b; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid #333; font-size:13px">📁 ${fileName}</div>` : ''}
+                    <span class="txt"></span>
+                </div>
+            `;
+            chat.appendChild(wrapper);
+            const txtSpan = wrapper.querySelector('.txt');
+
+            if (type === 'ai') {
+                let i = 0;
+                function typing() {
+                    if (i < text.length) { 
+                        txtSpan.innerHTML += text.charAt(i++); 
+                        chat.scrollTop = chat.scrollHeight; 
+                        setTimeout(typing, 10); 
+                    }
+                }
+                typing();
+            } else { txtSpan.innerText = text; }
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function showLoading() {
+            const id = "L" + Date.now();
+            const loader = document.createElement('div');
+            loader.className = "msg-wrapper ai-wrapper";
+            loader.id = id;
+            loader.innerHTML = `<div class="msg-name">Nam AI</div><div class="message" style="color:#666; font-style:italic;">Đang xử lý...</div>`;
+            document.getElementById('chat').appendChild(loader);
+            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+            return id;
+        }
+
+        document.getElementById('user-input').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+
+        document.getElementById('user-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+        });
+    </script>
+</body>
+</html>
