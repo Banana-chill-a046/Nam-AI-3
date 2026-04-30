@@ -187,7 +187,14 @@
                 });
                 const data = await response.json();
                 document.getElementById(loaderId).remove();
-                addMessage(data.candidates[0].content.parts[0].text, 'ai');
+                
+                // Kiểm tra cấu trúc phản hồi từ API
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    addMessage(data.candidates[0].content.parts[0].text, 'ai');
+                } else {
+                    addMessage("Nam không nhận được phản hồi, bạn thử lại nhé!", 'ai');
+                }
+
             } catch (e) {
                 document.getElementById(loaderId).innerText = "Lỗi kết nối Server!";
             }
