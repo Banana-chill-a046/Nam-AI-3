@@ -1,16 +1,13 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "pom.xml", 
-      "use": "@vercel/static-build",
-      "config": { "distDir": "target/static" }
-    }
-  ],
-  "routes": [
+      "source": "/api/chat",
+      "destination": "/api/chat.js"
+    },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
