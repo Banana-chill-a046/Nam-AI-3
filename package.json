@@ -1,7 +1,6 @@
 {
-  "name": "nam-ai-pro",
+  "name": "nam-ai",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
   "dependencies": {
     "node-fetch": "^3.3.1"
