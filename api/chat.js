@@ -6,30 +6,35 @@ export default async function handler(req, res) {
   const { message, image } = req.body;
   const apiKey = process.env.GROQ_API_KEY; 
 
-  if (!apiKey) return res.status(500).json({ error: "Lỗi cấu hình hệ thống." });
+  if (!apiKey) {
+    return res.status(500).json({ error: "Hệ thống chưa được cấu hình khóa bảo mật." });
+  }
 
+  // GIÁO DỤC NỀ NẾP CỦA NAM AI (BẢN CHUẨN)
   const systemInstruction = `
     Bạn là Nam AI - một trợ lý ảo có nề nếp, lịch sự và chính trực. 
     QUY TẮC CỐ ĐỊNH:
     1. Xưng hô: Gọi người dùng là "bạn", xưng là "Nam" hoặc "mình". 
-    2. Thái độ: Luôn tôn trọng, lễ phép, nghiêm túc.
-    3. Khả năng: Nam CÓ THỂ nhìn thấy hình ảnh bạn gửi và sẽ phân tích chúng một cách cẩn thận.
-    4. Đạo đức: Tuyệt đối từ chối nội dung xấu độc, phi pháp.
+    2. Thái độ: Luôn tôn trọng, lễ phép, nghiêm túc và điềm đạm.
+    3. Thị giác: Nam có khả năng quan sát hình ảnh và sẽ phản hồi dựa trên những gì Nam thấy một cách chính xác.
+    4. Đạo đức: Tuyệt đối từ chối các yêu cầu phi pháp, đồi trụy hoặc gây hại.
   `;
 
-  // Cấu trúc bắt buộc để Groq không bỏ sót hình ảnh
-  let contentArray = [];
+  // Cấu trúc Payload cho Meta Llama Vision
+  let userContents = [];
   
-  if (image) {
-    contentArray.push({
+  // 1. Đưa hình ảnh lên đầu danh sách nội dung để Meta AI ưu tiên xử lý
+  if (image && image.includes('base64')) {
+    userContents.push({
       type: "image_url",
-      image_url: { url: image } // Yêu cầu chuỗi Base64 hoàn chỉnh
+      image_url: { url: image }
     });
   }
 
-  contentArray.push({
+  // 2. Đưa văn bản vào sau hình ảnh
+  userContents.push({
     type: "text",
-    text: message || "Hãy cho Nam biết bạn cần hỗ trợ gì về hình ảnh này."
+    text: message || "Nam hãy xem và cho mình biết ý kiến về hình ảnh này."
   });
 
   try {
@@ -40,19 +45,23 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-3.2-11b-vision-preview",
+        model: "llama-3.2-11b-vision-preview", // Model Vision mạnh nhất của Meta trên Groq
         messages: [
           { role: "system", content: systemInstruction },
-          { role: "user", content: contentArray }
+          { role: "user", content: userContents }
         ],
-        temperature: 0.1, // Giữ sự ổn định cao nhất trong phản hồi
+        temperature: 0.1, // Mức độ ổn định tối đa, tránh cợt nhả
         max_tokens: 1024
       })
     });
 
     const data = await response.json();
-    
-    // Trả về kết quả cho Frontend
+
+    if (data.error) {
+      return res.status(500).json({ error: "Meta AI gặp sự cố khi xử lý dữ liệu." });
+    }
+
+    // Map dữ liệu để giữ nguyên tính tương thích với file HTML hiện tại
     const formattedData = {
       candidates: [{
         content: {
@@ -63,6 +72,6 @@ export default async function handler(req, res) {
 
     res.status(200).json(formattedData);
   } catch (error) {
-    res.status(500).json({ error: "Lỗi hệ thống khi xử lý thị giác." });
+    res.status(500).json({ error: "Kết nối đến hệ thống Nam AI bị gián đoạn." });
   }
 }
