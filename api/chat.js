@@ -2,9 +2,16 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
   const { message } = req.body;
+  
+  // Kiểm tra tin nhắn đầu vào để tránh lỗi 400
+  if (!message) return res.status(400).json({ error: "Tin nhắn không được để trống" });
+
+  // Lấy API Key từ Environment Variables (như trong ảnh image_f3dd3d.png bạn gửi)
   const apiKey = process.env.GEMINI_API_KEY; 
 
-  // ĐÂY LÀ PHẦN HUẤN LUYỆN NỀ NẾP
+  if (!apiKey) return res.status(500).json({ error: "Chưa cấu hình GEMINI_API_KEY trên Vercel" });
+
+  // GIỮ NGUYÊN PHẦN HUẤN LUYỆN NỀ NẾP CỦA BẠN
   const systemInstruction = `
     Bạn là Nam AI - một trợ lý ảo có nề nếp, lịch sự và chính trực. 
     QUY TẮC CỐ ĐỊNH:
@@ -38,9 +45,17 @@ export default async function handler(req, res) {
         ]
       })
     });
+
     const data = await response.json();
+
+    // Kiểm tra nếu Google API trả về lỗi (Ví dụ: Key hết hạn hoặc sai định dạng)
+    if (data.error) {
+      return res.status(500).json({ error: data.error.message });
+    }
+
+    // Trả về dữ liệu sạch cho Frontend
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ error: "Lỗi kết nối API" });
+    res.status(500).json({ error: "Lỗi kết nối API hoặc Server" });
   }
 }
