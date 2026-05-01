@@ -1,7 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+export default async function handler(req, res) {
+    if (req.method !== 'POST') return res.status(200).json({ reply: "Hệ thống đang chờ lệnh..." });
 
-const HE_THONG_GIA_HUAN = `
-Bạn là NAM AI , bạn hãy đọc các phần sau và tuân thủ các quy tắc và luật lệ của Nam PC:
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    // ĐÂY LÀ PHẦN QUY CỦ CỦA BẠN - ĐÃ ĐƯỢC KHÔI PHỤC
+    const HE_THONG_GIA_HUAN = `
+    Bạn là NAM AI , bạn hãy đọc các phần sau và tuân thủ các quy tắc và luật lệ của Nam PC:
 CHÍNH TRỰC VÀ QUY CỦ CỦA NAM AI 
 
 PHẦN 1: TẦM QUAN TRỌNG CỦA NỀ NẾP TRONG KỶ NGUYÊN SỐ
@@ -18,34 +22,49 @@ Sử dụng năng lực AI để phân tích theo trình tự: Tổng thể -> C
 
 KẾT LUẬN:
 Nam AI cam kết giữ vững các giá trị này. Mọi câu trả lời thiếu nề nếp đều là sự thất bại của hệ thống.
-`;
-
-export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ error: "Method Not Allowed" });
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(200).json({ reply: "Lỗi: Hệ thống chưa có API Key." });
+    `;
 
     try {
         const { message, imageBase64 } = req.body;
-        const genAI = new GoogleGenerativeAI(apiKey);
         
-        // SỬ DỤNG MODEL 1.0 PRO - ĐÂY LÀ BẢN ỔN ĐỊNH NHẤT KHÔNG BỊ LỖI 404
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        // Gắn chặt Gia Huấn vào mọi yêu cầu gửi đi
+        const payload = {
+            contents: [{
+                parts: [{ text: `${HE_THONG_GIA_HUAN}\n\nNgười dùng yêu cầu: ${message || "Kiểm tra hệ thống"}` }]
+            }],
+            generationConfig: {
+                temperature: 0.4, // Giảm độ ngẫu nhiên để AI trả lời điềm đạm hơn
+                topP: 0.8,
+                topK: 40
+            }
+        };
 
-        // Đưa phần huấn luyện trực tiếp vào Prompt để AI luôn ghi nhớ quy củ
-        const promptToAi = `${HE_THONG_GIA_HUAN}\n\nNgười dùng nói: ${message || "Chào bạn"}\nNam AI hãy phản hồi theo đúng nề nếp:`;
+        if (imageBase64) {
+            const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+            payload.contents[0].parts.push({
+                inline_data: { mime_type: "image/jpeg", data: base64Data }
+            });
+        }
 
-        const result = await model.generateContent(promptToAi);
-        const response = await result.response;
-        return res.status(200).json({ reply: response.text() });
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            }
+        );
+
+        const data = await response.json();
+
+        if (data.error) {
+            return res.status(200).json({ reply: `Nam AI tạm nghỉ vì: ${data.error.message}` });
+        }
+
+        const replyText = data.candidates[0].content.parts[0].text;
+        return res.status(200).json({ reply: replyText });
 
     } catch (error) {
-        console.error("Critical Error:", error.message);
-        
-        // Nếu vẫn lỗi, đây là lớp phòng thủ cuối cùng để bạn biết nguyên nhân
-        return res.status(200).json({ 
-            reply: "Hệ thống đang được hiệu chỉnh nề nếp. Vui lòng thử lại sau giây lát. (Mã lỗi: " + error.message + ")" 
-        });
+        return res.status(200).json({ reply: " Đang tái thiết lập: " + error.message });
     }
 }
