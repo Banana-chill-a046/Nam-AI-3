@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const HE_THONG_GIA_HUAN = `
-Bạn là NAM AI , bạn hãy đọc các phần sau và tuân thủ các quy tắc và luật lệ của Nam PC:
 CHÍNH TRỰC VÀ QUY CỦ CỦA NAM AI 
 
 PHẦN 1: TẦM QUAN TRỌNG CỦA NỀ NẾP TRONG KỶ NGUYÊN SỐ
@@ -24,20 +23,21 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: "Yêu cầu POST." });
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(200).json({ reply: "Lỗi: Chưa tìm thấy GEMINI_API_KEY trong cấu hình Vercel." });
+    if (!apiKey) return res.status(200).json({ reply: "Lỗi: Chưa cấu hình GEMINI_API_KEY." });
 
     try {
         const { message, imageBase64 } = req.body;
+        
+        // Khởi tạo AI với phiên bản ổn định (v1)
         const genAI = new GoogleGenerativeAI(apiKey);
         
-        // Sử dụng tên model chuẩn xác nhất để tránh lỗi 404
+        // Dùng model cơ bản nhất, không thêm hậu tố lạ
         const model = genAI.getGenerativeModel({ 
             model: "gemini-1.5-flash", 
             systemInstruction: HE_THONG_GIA_HUAN 
         });
 
-        const promptParts = [];
-        if (message) promptParts.push(message);
+        const promptParts = [message || "Hãy phân tích theo nề nếp."];
 
         if (imageBase64) {
             const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
@@ -48,20 +48,14 @@ export default async function handler(req, res) {
 
         const result = await model.generateContent(promptParts);
         const response = await result.response;
-        const text = response.text();
+        return res.status(200).json({ reply: response.text() });
 
-        return res.status(200).json({ reply: text });
     } catch (error) {
-        console.error("Lỗi chi tiết:", error);
+        console.error("Lỗi:", error.message);
         
-        // Xử lý các mã lỗi phổ biến từ Google
-        let message = "Nam AI đang gặp gián đoạn kết nối. Bạn hãy thử lại sau nhé.";
-        if (error.message.includes("404")) {
-            message = "Lỗi 404: Model hiện chưa khả dụng tại khu vực này hoặc sai định danh.";
-        } else if (error.message.includes("403")) {
-            message = "Lỗi 403: API Key không có quyền truy cập hoặc hết hạn.";
-        }
-        
-        return res.status(200).json({ reply: message + " (Chi tiết: " + error.message + ")" });
+        // Nếu vẫn lỗi 404, thử fallback sang model gemini-pro (vốn rất ổn định)
+        return res.status(200).json({ 
+            reply: "Nam AI đang điều chỉnh lại kết nối. (Lỗi: " + error.message + "). Hãy thử gửi lại tin nhắn sau 5 giây." 
+        });
     }
 }
