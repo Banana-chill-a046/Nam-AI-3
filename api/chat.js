@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// GIỮ NGUYÊN HỆ THỐNG GIA HUAN CỦA BẠN
 const HE_THONG_GIA_HUAN = `
 Bạn là NAM AI , bạn hãy đọc các phần sau và tuân thủ các quy tắc và luật lệ của Nam PC:
 CHÍNH TRỰC VÀ QUY CỦ CỦA NAM AI 
@@ -25,17 +24,15 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: "Yêu cầu POST." });
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || !apiKey.startsWith("AIzaSy")) {
-        return res.status(200).json({ reply: "Lỗi: API Key không hợp lệ hoặc chưa cấu hình đúng mã AIzaSy." });
-    }
+    if (!apiKey) return res.status(200).json({ reply: "Lỗi: Chưa tìm thấy GEMINI_API_KEY trong cấu hình Vercel." });
 
     try {
         const { message, imageBase64 } = req.body;
         const genAI = new GoogleGenerativeAI(apiKey);
         
-        // Sửa định danh model thành "gemini-1.5-flash-latest" để tránh lỗi 404
+        // Sử dụng tên model chuẩn xác nhất để tránh lỗi 404
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash-latest", 
+            model: "gemini-1.5-flash", 
             systemInstruction: HE_THONG_GIA_HUAN 
         });
 
@@ -43,25 +40,28 @@ export default async function handler(req, res) {
         if (message) promptParts.push(message);
 
         if (imageBase64) {
-            try {
-                const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
-                promptParts.push({
-                    inlineData: { data: base64Data, mimeType: "image/jpeg" }
-                });
-            } catch (e) {
-                return res.status(200).json({ reply: "Dữ liệu hình ảnh không đúng định dạng." });
-            }
+            const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+            promptParts.push({
+                inlineData: { data: base64Data, mimeType: "image/jpeg" }
+            });
         }
 
         const result = await model.generateContent(promptParts);
-        const responseText = result.response.text();
+        const response = await result.response;
+        const text = response.text();
 
-        return res.status(200).json({ reply: responseText });
+        return res.status(200).json({ reply: text });
     } catch (error) {
-        console.error("Lỗi thực thi:", error.message);
-        // Trả về thông báo lỗi thân thiện thay vì lỗi 500
-        return res.status(200).json({ 
-            reply: "Nam AI đang gặp gián đoạn kết nối. Vui lòng kiểm tra lại cấu hình hoặc thử lại sau. (Chi tiết: " + error.message + ")" 
-        });
+        console.error("Lỗi chi tiết:", error);
+        
+        // Xử lý các mã lỗi phổ biến từ Google
+        let message = "Nam AI đang gặp gián đoạn kết nối. Bạn hãy thử lại sau nhé.";
+        if (error.message.includes("404")) {
+            message = "Lỗi 404: Model hiện chưa khả dụng tại khu vực này hoặc sai định danh.";
+        } else if (error.message.includes("403")) {
+            message = "Lỗi 403: API Key không có quyền truy cập hoặc hết hạn.";
+        }
+        
+        return res.status(200).json({ reply: message + " (Chi tiết: " + error.message + ")" });
     }
 }
