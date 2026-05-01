@@ -1,11 +1,8 @@
 export default async function handler(req, res) {
-    // Đảm bảo chỉ nhận yêu cầu POST theo đúng quy trình
     if (req.method !== 'POST') return res.status(200).json({ reply: "Đang chờ lệnh từ bạn..." });
 
-    // Lấy API Key từ biến môi trường Vercel
     const apiKey = process.env.GROK_API_KEY; 
 
-    // HỆ THỐNG GIA HUẤN CỦA NAM AI - ĐÃ ĐƯỢC CẬP NHẬT ĐẦY ĐỦ
     const HE_THONG_GIA_HUAN = `
     Bạn là NAM AI. Bạn phải tuân thủ các quy tắc và luật lệ sau của Nam PC:
 
@@ -28,7 +25,19 @@ export default async function handler(req, res) {
     `;
 
     try {
-        const { message } = req.body;
+        const { message, imageBase64 } = req.body;
+
+        // Cấu trúc nội dung tin nhắn hỗ trợ cả văn bản và hình ảnh
+        let userContent = [{ type: "text", text: message || "Hãy phân tích ảnh và cho lời giải !." }];
+        
+        if (imageBase64) {
+            // Đảm bảo imageBase64 là một URL data hợp lệ (ví dụ: data:image/jpeg;base64,...)
+            const imageUrl = imageBase64.startsWith("data:") ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`;
+            userContent.push({
+                type: "image_url",
+                image_url: { url: imageUrl }
+            });
+        }
 
         const response = await fetch("https://api.x.ai/v1/chat/completions", {
             method: "POST",
@@ -37,27 +46,25 @@ export default async function handler(req, res) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                model: "grok-beta", 
+                model: "grok-vision-beta", 
                 messages: [
                     { role: "system", content: HE_THONG_GIA_HUAN },
-                    { role: "user", content: message }
+                    { role: "user", content: userContent }
                 ],
-                temperature: 0.5 // Thiết lập độ ổn định thấp để AI giữ đúng tác phong điềm đạm
+                temperature: 0.5
             })
         });
 
         const data = await response.json();
 
         if (data.error) {
-            return res.status(200).json({ reply: `Nam AI báo lỗi hệ thống: ${data.error.message}` });
+            return res.status(200).json({ reply: `Nam AI báo lỗi: ${data.error.message}` });
         }
 
-        // Trả về phản hồi nề nếp từ AI
         const replyText = data.choices[0].message.content;
         return res.status(200).json({ reply: replyText });
 
     } catch (error) {
-        // Phản hồi khi có lỗi ngoại vi, đảm bảo không làm gián đoạn trải nghiệm người dùng
         return res.status(200).json({ reply: "Nam AI đang được tái thiết lập: " + error.message });
     }
 }
