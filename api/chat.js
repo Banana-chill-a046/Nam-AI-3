@@ -23,21 +23,21 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: "Yêu cầu POST." });
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(200).json({ reply: "Lỗi: Chưa cấu hình GEMINI_API_KEY." });
+    if (!apiKey) return res.status(200).json({ reply: "Lỗi: API Key chưa được cấu hình." });
 
     try {
         const { message, imageBase64 } = req.body;
-        
-        // Khởi tạo AI với phiên bản ổn định (v1)
         const genAI = new GoogleGenerativeAI(apiKey);
         
-        // Dùng model cơ bản nhất, không thêm hậu tố lạ
+        // SỬ DỤNG GEMINI-PRO ĐỂ TRÁNH LỖI 404 ĐỊNH DANH
+        // Model này ổn định nhất trên toàn cầu
+        const modelName = imageBase64 ? "gemini-pro-vision" : "gemini-pro";
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash", 
+            model: modelName, 
             systemInstruction: HE_THONG_GIA_HUAN 
         });
 
-        const promptParts = [message || "Hãy phân tích theo nề nếp."];
+        const promptParts = [message || "Chào bạn."];
 
         if (imageBase64) {
             const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
@@ -52,10 +52,10 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error("Lỗi:", error.message);
+        let msg = "Kết nối không thành công.";
+        if (error.message.includes("403")) msg = "Lỗi 403: Vercel hoặc Google chặn truy cập. Hãy kiểm tra lại quyền của API Key.";
+        if (error.message.includes("404")) msg = "Lỗi 404: Model này không tồn tại hoặc không hỗ trợ khu vực của bạn.";
         
-        // Nếu vẫn lỗi 404, thử fallback sang model gemini-pro (vốn rất ổn định)
-        return res.status(200).json({ 
-            reply: "Nam AI đang điều chỉnh lại kết nối. (Lỗi: " + error.message + "). Hãy thử gửi lại tin nhắn sau 5 giây." 
-        });
+        return res.status(200).json({ reply: msg + " (Chi tiết: " + error.message + ")" });
     }
 }
